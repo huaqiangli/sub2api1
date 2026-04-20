@@ -115,6 +115,7 @@ export interface SystemSettings {
   enable_metadata_passthrough: boolean
   enable_cch_signing: boolean
   web_search_emulation_enabled?: boolean
+  disable_web_tools: boolean
 
   // Payment configuration
   payment_enabled: boolean
@@ -224,6 +225,7 @@ export interface UpdateSettingsRequest {
   enable_fingerprint_unification?: boolean
   enable_metadata_passthrough?: boolean
   enable_cch_signing?: boolean
+  disable_web_tools?: boolean
   // Payment configuration
   payment_enabled?: boolean
   payment_min_amount?: number

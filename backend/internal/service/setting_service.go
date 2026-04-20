@@ -114,6 +114,15 @@ type SettingService struct {
 	webSearchManagerBuilder WebSearchManagerBuilder
 }
 
+// IsWebToolsDisabled 检查是否禁用web工具
+func (s *SettingService) IsWebToolsDisabled(ctx context.Context) bool {
+    settings, err := s.GetAllSettings(ctx)
+    if err != nil {
+        return false
+    }
+    return settings.DisableWebTools
+}
+
 // NewSettingService 创建系统设置服务实例
 func NewSettingService(settingRepo SettingRepository, cfg *config.Config) *SettingService {
 	return &SettingService{
@@ -626,6 +635,7 @@ func (s *SettingService) UpdateSettings(ctx context.Context, settings *SystemSet
 	updates[SettingKeyEnableFingerprintUnification] = strconv.FormatBool(settings.EnableFingerprintUnification)
 	updates[SettingKeyEnableMetadataPassthrough] = strconv.FormatBool(settings.EnableMetadataPassthrough)
 	updates[SettingKeyEnableCCHSigning] = strconv.FormatBool(settings.EnableCCHSigning)
+	updates[SettingKeyDisableWebTools] = strconv.FormatBool(settings.DisableWebTools)
 
 	// Balance low notification
 	updates[SettingKeyBalanceLowNotifyEnabled] = strconv.FormatBool(settings.BalanceLowNotifyEnabled)
@@ -974,6 +984,8 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 
 		// 分组隔离（默认不允许未分组 Key 调度）
 		SettingKeyAllowUngroupedKeyScheduling: "false",
+		// disable web
+		SettingKeyDisableWebTools: "false",
 	}
 
 	return s.settingRepo.SetMultiple(ctx, defaults)
@@ -1255,6 +1267,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	}
 	result.EnableMetadataPassthrough = settings[SettingKeyEnableMetadataPassthrough] == "true"
 	result.EnableCCHSigning = settings[SettingKeyEnableCCHSigning] == "true"
+	result.DisableWebTools = settings[SettingKeyDisableWebTools] == "true"
 
 	// Web search emulation: quick enabled check from the JSON config
 	if raw := settings[SettingKeyWebSearchEmulationConfig]; raw != "" {

@@ -174,6 +174,7 @@ func (h *SettingHandler) GetSettings(c *gin.Context) {
 		EnableFingerprintUnification:         settings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            settings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     settings.EnableCCHSigning,
+		DisableWebTools:                      settings.DisableWebTools,
 		WebSearchEmulationEnabled:            settings.WebSearchEmulationEnabled,
 		BalanceLowNotifyEnabled:              settings.BalanceLowNotifyEnabled,
 		BalanceLowNotifyThreshold:            settings.BalanceLowNotifyThreshold,
@@ -310,6 +311,7 @@ type UpdateSettingsRequest struct {
 	EnableFingerprintUnification *bool `json:"enable_fingerprint_unification"`
 	EnableMetadataPassthrough    *bool `json:"enable_metadata_passthrough"`
 	EnableCCHSigning             *bool `json:"enable_cch_signing"`
+	DisableWebTools              *bool `json:"disable_web_tools"`
 
 	// Balance low notification
 	BalanceLowNotifyEnabled     *bool                   `json:"balance_low_notify_enabled"`
@@ -897,6 +899,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.EnableCCHSigning
 		}(),
+		DisableWebTools: func() bool {
+                        if req.DisableWebTools != nil {
+                                return *req.DisableWebTools
+                        }
+                        return previousSettings.DisableWebTools
+                }(),
 		BalanceLowNotifyEnabled: func() bool {
 			if req.BalanceLowNotifyEnabled != nil {
 				return *req.BalanceLowNotifyEnabled
@@ -1075,6 +1083,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		EnableFingerprintUnification:         updatedSettings.EnableFingerprintUnification,
 		EnableMetadataPassthrough:            updatedSettings.EnableMetadataPassthrough,
 		EnableCCHSigning:                     updatedSettings.EnableCCHSigning,
+		DisableWebTools:                      updatedSettings.DisableWebTools,
 		BalanceLowNotifyEnabled:              updatedSettings.BalanceLowNotifyEnabled,
 		BalanceLowNotifyThreshold:            updatedSettings.BalanceLowNotifyThreshold,
 		BalanceLowNotifyRechargeURL:          updatedSettings.BalanceLowNotifyRechargeURL,

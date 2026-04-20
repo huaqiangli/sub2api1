@@ -343,6 +343,7 @@ type OpenAIGatewayService struct {
 	openaiWSRetryMetrics  openAIWSRetryMetrics
 	responseHeaderFilter  *responseheaders.CompiledHeaderFilter
 	codexSnapshotThrottle *accountWriteThrottle
+	settingService        *SettingService
 }
 
 // NewOpenAIGatewayService creates a new OpenAIGatewayService
@@ -366,6 +367,7 @@ func NewOpenAIGatewayService(
 	resolver *ModelPricingResolver,
 	channelService *ChannelService,
 	balanceNotifyService *BalanceNotifyService,
+	settingService *SettingService,
 ) *OpenAIGatewayService {
 	svc := &OpenAIGatewayService{
 		accountRepo:         accountRepo,
@@ -398,6 +400,7 @@ func NewOpenAIGatewayService(
 		balanceNotifyService:  balanceNotifyService,
 		responseHeaderFilter:  compileResponseHeaderFilter(cfg),
 		codexSnapshotThrottle: newAccountWriteThrottle(openAICodexSnapshotPersistMinInterval),
+		settingService: settingService,
 	}
 	svc.logOpenAIWSModeBootstrap()
 	return svc
@@ -1797,9 +1800,42 @@ func (s *OpenAIGatewayService) handleFailoverSideEffects(ctx context.Context, re
 	s.rateLimitService.HandleUpstreamError(ctx, account, resp.StatusCode, resp.Header, body)
 }
 
+// injectWebToolsDisabledNotice 向system prompt中注入禁用通知
+func (s *OpenAIGatewayService) injectWebToolsDisabledNotice(body []byte) []byte {
+    notice := "[System Notice] Web search and web fetch tools are disabled on this relay deployment. " +
+             "If the user requests web search, URL fetching, or any internet access, inform them that " +
+             "these capabilities are not available in the current environment. Do NOT attempt to use " +
+             "WebFetch, WebSearch, web_search, web_fetch, or any similar tools. " +
+             "Continue to assist using your built-in knowledge only."
+
+    // 解析现有system
+    var parsed map[string]interface{}
+    if err := json.Unmarshal(body, &parsed); err != nil {
+        return body
+    }
+
+    // 构建新的system内容
+    // 构建新的instructions内容
+    if existingInstructions, exists := parsed["instructions"]; exists {
+        if instructionsStr, ok := existingInstructions.(string); ok && instructionsStr != "" {
+            parsed["instructions"] = notice + "\n\n" + instructionsStr
+        } else {
+            parsed["instructions"] = notice
+        }
+    } else {
+        parsed["instructions"] = notice
+    }
+
+    updatedBody, _ := json.Marshal(parsed)
+    return updatedBody
+}
+
 // Forward forwards request to OpenAI API
 func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte) (*OpenAIForwardResult, error) {
 	startTime := time.Now()
+	if s.settingService.IsWebToolsDisabled(ctx) {
+            body = s.injectWebToolsDisabledNotice(body)
+        }
 
 	restrictionResult := s.detectCodexClientRestriction(c, account)
 	apiKeyID := getAPIKeyIDFromContext(c)

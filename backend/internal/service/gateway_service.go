@@ -3928,12 +3928,68 @@ func enforceCacheControlLimit(body []byte) []byte {
 	return body
 }
 
+// injectWebToolsDisabledNotice 向system prompt中注入禁用通知
+func (s *GatewayService) injectWebToolsDisabledNotice(body []byte) []byte {
+    notice := "[System Notice] Web search and web fetch tools are disabled on this relay deployment. " +
+             "If the user requests web search, URL fetching, or any internet access, inform them that " +
+             "these capabilities are not available in the current environment. Do NOT attempt to use " +
+             "WebFetch, WebSearch, web_search, web_fetch, or any similar tools. " +
+             "Continue to assist using your built-in knowledge only."
+
+    // 解析现有system
+    var parsed map[string]interface{}
+    if err := json.Unmarshal(body, &parsed); err != nil {
+        return body
+    }
+
+    // 构建新的system内容
+    var newSystem []interface{}
+    if existingSystem, exists := parsed["system"]; exists {
+        switch sys := existingSystem.(type) {
+        case string:
+            newSystem = []interface{}{
+                map[string]interface{}{
+                    "type": "text",
+                    "text": notice,
+                },
+                map[string]interface{}{
+                    "type": "text",
+                    "text": sys,
+                },
+            }
+        case []interface{}:
+            newSystem = append([]interface{}{
+                map[string]interface{}{
+                    "type": "text",
+                    "text": notice,
+                },
+            }, sys...)
+        }
+    } else {
+        newSystem = []interface{}{
+            map[string]interface{}{
+                "type": "text",
+                "text": notice,
+            },
+        }
+    }
+
+    parsed["system"] = newSystem
+    updatedBody, _ := json.Marshal(parsed)
+    return updatedBody
+}
+
 // Forward 转发请求到Claude API
 func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, parsed *ParsedRequest) (*ForwardResult, error) {
 	startTime := time.Now()
 	if parsed == nil {
 		return nil, fmt.Errorf("parse request: empty request")
 	}
+
+	if s.settingService.IsWebToolsDisabled(ctx) {
+           parsed.Body = s.injectWebToolsDisabledNotice(parsed.Body)
+           // 修改parsed.Body以包含禁用通知
+        }
 
 	// Web Search 模拟：纯 web_search 请求时，直接调用搜索 API 构造响应
 	if account != nil && s.shouldEmulateWebSearch(ctx, account, parsed.GroupID, parsed.Body) {

@@ -4424,6 +4424,8 @@ export default {
         metadataPassthroughHint: 'Pass through client\'s original metadata.user_id without rewriting. May improve upstream cache hit rates.',
         cchSigning: 'CCH Signing',
         cchSigningHint: 'Sign the billing header in forwarded requests with CCH hash. When disabled, the placeholder is preserved.',
+	disableWebTools: "Disable Web Tools",
+	disableWebToolsHint: "Globally disable web search and web fetch capabilities across all platforms"
       },
       webSearchEmulation: {
         title: 'Web Search Emulation',

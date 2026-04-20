@@ -4586,6 +4586,8 @@ export default {
         metadataPassthroughHint: '透传客户端原始 metadata.user_id，不进行重写。可能提高上游缓存命中率。',
         cchSigning: 'CCH 签名',
         cchSigningHint: '对转发请求的 billing header 进行 CCH 哈希签名。关闭时保留原始占位符。',
+	disableWebTools: "禁用Web工具",
+        disableWebToolsHint: "全局禁用所有平台的web搜索和web获取功能"
       },
       webSearchEmulation: {
         title: 'Web Search 模拟',
