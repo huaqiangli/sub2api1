@@ -122,6 +122,7 @@ func (s *SettingService) IsWebToolsDisabled(ctx context.Context) bool {
         return false
     }
     return settings.DisableWebTools
+}
 
 type ProviderDefaultGrantSettings struct {
 	Balance          float64
@@ -368,7 +369,6 @@ func (s *SettingService) effectiveWeChatConnectOAuthConfig(settings map[string]s
 		RedirectURL:         strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectRedirectURL], base.RedirectURL)),
 		FrontendRedirectURL: strings.TrimSpace(firstNonEmpty(settings[SettingKeyWeChatConnectFrontendRedirectURL], base.FrontendRedirectURL, defaultWeChatConnectFrontend)),
 	}
->>>>>>> main
 }
 
 // NewSettingService 创建系统设置服务实例
@@ -1893,7 +1893,6 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyAllowUngroupedKeyScheduling: "false",
 		// disable web
 		SettingKeyDisableWebTools: "false",
-		SettingKeyAllowUngroupedKeyScheduling:    "false",
 		SettingPaymentVisibleMethodAlipaySource:  "",
 		SettingPaymentVisibleMethodWxpaySource:   "",
 		SettingPaymentVisibleMethodAlipayEnabled: "false",
