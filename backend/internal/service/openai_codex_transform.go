@@ -971,6 +971,27 @@ func codexInputItemRequiresName(typ string) bool {
 	}
 }
 
+// shouldFilterCodexTool 判断是否应该过滤该工具
+func shouldFilterCodexTool(toolMap map[string]any) bool {
+	name, _ := toolMap["name"].(string)
+	name = strings.ToLower(strings.TrimSpace(name))
+
+	// 过滤 websearch 相关工具
+	switch name {
+	case "websearch", "web_search", "webfetch", "web_fetch", "fetch":
+		return true
+	}
+
+	// 也可以根据 type 过滤
+	toolType, _ := toolMap["type"].(string)
+	toolType = strings.ToLower(strings.TrimSpace(toolType))
+	if strings.HasPrefix(toolType, "web_search")  {
+		return true
+	}
+
+	return false
+}
+
 func normalizeCodexTools(reqBody map[string]any) bool {
 	rawTools, ok := reqBody["tools"]
 	if !ok || rawTools == nil {
@@ -989,6 +1010,12 @@ func normalizeCodexTools(reqBody map[string]any) bool {
 		if !ok {
 			// Keep unknown structure as-is to avoid breaking upstream behavior.
 			validTools = append(validTools, tool)
+			continue
+		}
+
+	        // 过滤 websearch 和 webfetch 相关工具
+		if shouldFilterCodexTool(toolMap) {
+			modified = true
 			continue
 		}
 
