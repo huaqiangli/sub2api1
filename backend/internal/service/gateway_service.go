@@ -1038,6 +1038,30 @@ func ensureClaudeOAuthMetadataUserID(body []byte, userID string) ([]byte, bool) 
 	return setJSONRawBytes(body, "metadata", raw)
 }
 
+
+func isWebSearchOrWebFetchTool(tool gjson.Result) bool {
+    toolType := strings.ToLower(tool.Get("type").String())
+    toolName := strings.ToLower(tool.Get("name").String())
+
+    // 检查 websearch 相关
+    if strings.HasPrefix(toolType, "web_search") || toolType == "google_search" {
+        return true
+    }
+    if strings.HasPrefix(toolName, "web_search") || strings.HasPrefix(toolName,"websearch") || toolName == "google_search" {
+        return true
+    }
+
+    // 检查 webfetch 相关
+    if strings.HasPrefix(toolType, "web_fetch") || toolType == "browser_fetch" {
+        return true
+    }
+    if strings.HasPrefix(toolName, "web_fetch") || strings.HasPrefix(toolName,"webfetch") || toolName == "browser_fetch" {
+        return true
+    }
+
+    return false
+}
+
 func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAuthNormalizeOptions) ([]byte, string) {
 	if len(body) == 0 {
 		return body, modelID
@@ -1070,6 +1094,32 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
 			modified = true
 		}
 	}
+
+	// 新增：过滤掉 websearch 和 webfetch tools
+        tools := gjson.GetBytes(out, "tools")
+        if tools.IsArray() && len(tools.Array()) > 0 {
+           filteredTools := make([]gjson.Result, 0)
+           for _, tool := range tools.Array() {
+               if !isWebSearchOrWebFetchTool(tool) {
+                   filteredTools = append(filteredTools, tool)
+               }
+           }
+           if len(filteredTools) != len(tools.Array()) {
+               if len(filteredTools) == 0 {
+                   if next, ok := setJSONRawBytes(out, "tools", []byte("[]")); ok {
+                      out = next
+                      modified = true
+                   }
+               } else {
+                   // 重建过滤后的 tools 数组
+                   toolsJSON, _ := json.Marshal(filteredTools)
+                   if next, ok := setJSONRawBytes(out, "tools", toolsJSON); ok {
+                      out = next
+                      modified = true
+                   }
+               }
+           }
+        }
 
 	if opts.injectMetadata && opts.metadataUserID != "" {
 		if next, changed := ensureClaudeOAuthMetadataUserID(out, opts.metadataUserID); changed {
