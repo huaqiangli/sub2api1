@@ -1062,6 +1062,39 @@ func isWebSearchOrWebFetchTool(tool gjson.Result) bool {
     return false
 }
 
+func filterWebToolsFromBody(body []byte) []byte {
+    tools := gjson.GetBytes(body, "tools")
+    if !tools.IsArray() || len(tools.Array()) == 0 {
+        return body
+    }
+    filteredTools := make([]gjson.Result, 0)
+    for _, tool := range tools.Array() {
+        if !isWebSearchOrWebFetchTool(tool) {
+            filteredTools = append(filteredTools, tool)
+        }
+    }
+    if len(filteredTools) == len(tools.Array()) {
+        return body // 没有需要过滤的工具
+    }
+    var newTools []byte
+    if len(filteredTools) == 0 {
+        newTools = []byte("[]")
+    } else {
+        newTools, _ = json.Marshal(filteredTools)
+    }
+    if next, ok := setJSONRawBytes(body, "tools", newTools); ok {
+        // tools 为空时同步删除 tool_choice，避免上游 400
+        if len(filteredTools) == 0 {
+            if next2, ok2 := deleteJSONPathBytes(next, "tool_choice"); ok2 {
+                return next2
+            }
+        }
+        return next
+    }
+    return body
+}
+
+
 func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAuthNormalizeOptions) ([]byte, string) {
 	if len(body) == 0 {
 		return body, modelID
@@ -4197,6 +4230,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 	if s.settingService.IsWebToolsDisabled(ctx) {
            parsed.Body = s.injectWebToolsDisabledNotice(parsed.Body)
            // 修改parsed.Body以包含禁用通知
+           parsed.Body = filterWebToolsFromBody(parsed.Body)  // 直接从请求体删除 web tools  
         }
 
 	// Web Search 模拟：纯 web_search 请求时，直接调用搜索 API 构造响应
