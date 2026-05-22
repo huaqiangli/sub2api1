@@ -1080,7 +1080,11 @@ func filterWebToolsFromBody(body []byte) []byte {
     if len(filteredTools) == 0 {
         newTools = []byte("[]")
     } else {
-        newTools, _ = json.Marshal(filteredTools)
+        toolsRaw := make([][]byte, 0, len(filteredTools))
+        for _, tool := range filteredTools {
+            toolsRaw = append(toolsRaw, []byte(tool.Raw))
+        }
+        newTools = []byte("[" + string(bytes.Join(toolsRaw, []byte(","))) + "]")
     }
     if next, ok := setJSONRawBytes(body, "tools", newTools); ok {
         // tools 为空时同步删除 tool_choice，避免上游 400
