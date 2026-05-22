@@ -1145,7 +1145,11 @@ func normalizeClaudeOAuthRequestBody(body []byte, modelID string, opts claudeOAu
                    }
                } else {
                    // 重建过滤后的 tools 数组
-                   toolsJSON, _ := json.Marshal(filteredTools)
+		   toolsRaw := make([][]byte, 0, len(filteredTools))
+                   for _, tool := range filteredTools {
+                       toolsRaw = append(toolsRaw, []byte(tool.Raw))
+                   }
+                   toolsJSON := []byte("[" + string(bytes.Join(toolsRaw, []byte(","))) + "]")
                    if next, ok := setJSONRawBytes(out, "tools", toolsJSON); ok {
                       out = next
                       modified = true
